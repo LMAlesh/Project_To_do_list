@@ -1,59 +1,110 @@
 const add_todo_page = () => {
     const content = document.getElementById('content');
-    content.innerHTML='';
+    content.innerHTML = '';
 
     const form = document.createElement('form');
     form.method = 'POST';
 
+    // Title input
     const titleInput = document.createElement('input');
     titleInput.type = 'text';
     titleInput.name = 'title';
-    titleInput.placeholder = "Enter task";
+    titleInput.placeholder = 'Enter task';
 
+    // Description input
     const descInput = document.createElement('input');
     descInput.type = 'text';
     descInput.name = 'description';
-    descInput.placeholder = "Enter description";
+    descInput.placeholder = 'Enter description';
 
+    // Date input
     const dateInput = document.createElement('input');
     dateInput.type = 'date';
-    dateInput.name = 'Due date';
+    dateInput.name = 'due_date';
 
-    const priorityInput1 = document.createElement('input');
-    priorityInput1.type = 'radio';
-    priorityInput1.name = 'priority';
-    priorityInput1.value = 'low';
+    // Priority label group
+    const priorityLabel = document.createElement('p');
+    priorityLabel.textContent = 'Priority:';
 
-    const priorityInput2 = document.createElement('input');
-    priorityInput2.type = 'radio';
-    priorityInput2.name = 'priority';
-    priorityInput2.value = 'moderate';
+    // Priority radios and labels
+    const priorities = [
+        { value: 'low', label: 'Low' },
+        { value: 'moderate', label: 'Moderate' },
+        { value: 'high', label: 'High' }
+    ];
+
+    // Create a <div> element to hold all the priority radio buttons and their labels
+    const priorityWrapper = document.createElement('div');
+
+    // Iterate over the priorities array (e.g., [{ value: 'low', label: 'Low' }, ...])
+    priorities.forEach(({ value, label }) => {
     
-    const priorityInput3 = document.createElement('input');
-    priorityInput3.type = 'radio';
-    priorityInput3.name = 'priority';
-    priorityInput3.value = 'high';
+    // Create a radio button input for this priority option
+    const radio = document.createElement('input');
+    radio.type = 'radio';          // Set type to 'radio' so only one can be selected
+    radio.name = 'priority';       // Group all radios under the same name
+    radio.value = value;           // Set the value (e.g., 'low', 'moderate', 'high')
+    radio.id = `priority-${value}`;// Assign a unique id (e.g., 'priority-low')
 
-    const categoryInput = document.createElement('input');           
+    // Create a label element that corresponds to this radio input
+    const radioLabel = document.createElement('label');
+    radioLabel.setAttribute('for', `priority-${value}`); // Link label to radio by id
+    radioLabel.textContent = label;                      // Set visible label text
+
+    // Append both the radio input and its label to the priority wrapper <div>
+    priorityWrapper.appendChild(radio);
+    priorityWrapper.appendChild(radioLabel);
+});
+
+    // Category input
+    const categoryInput = document.createElement('input');
     categoryInput.type = 'text';
     categoryInput.name = 'category';
+    categoryInput.placeholder = 'Enter category';
 
+    // Submit button 
     const submit = document.createElement('button');
-    submit.type = submit;
+    submit.type = 'submit';
     submit.textContent = 'Submit';
 
-    content.appendChild(form);
+    // Append everything to the form
     form.appendChild(titleInput);
     form.appendChild(descInput);
     form.appendChild(dateInput);
-    form.appendChild(priorityInput1);
-    form.appendChild(priorityInput2);
-    form.appendChild(priorityInput3);
+    form.appendChild(priorityLabel);
+    form.appendChild(priorityWrapper);
     form.appendChild(categoryInput);
     form.appendChild(submit);
-    
-    // document.getElementById("form-container").appendChild(form);
-    
-}
+
+    // Add form to the page
+    content.appendChild(form);
+    form.addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent default form submission (page reload)
+
+    // Gather form data
+    const todo = {
+        title: titleInput.value,
+        description: descInput.value,
+        dueDate: dateInput.value,
+        priority: form.priority.value, // or document.querySelector('input[name="priority"]:checked')?.value
+        category: categoryInput.value
+    };
+
+    // Retrieve existing todos from localStorage or initialize an empty array
+    const existingTodos = JSON.parse(localStorage.getItem('todos')) || [];
+
+    // Add the new todo
+    existingTodos.push(todo);
+
+    // Save back to localStorage
+    localStorage.setItem('todos', JSON.stringify(existingTodos));
+
+    // Optional: clear form or show confirmation
+    form.reset();
+    alert('Todo saved locally!');
+});
+
+};
+
 
 export { add_todo_page };
