@@ -26,3 +26,38 @@ nav {
     justify-content: center;
     
 }
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    padding: 10px;
+}
+
+.calendar-day {
+    text-align: center;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+}
+
+.calendar-day.empty {
+    background-color: transparent;
+    border: none;
+}
+
+.calendar-day.priority-low {
+    background-color: #9acd32; /* Green */
+}
+
+.calendar-day.priority-moderate {
+    background-color: #ffa500; /* Orange */
+}
+
+.calendar-day.priority-high {
+    background-color: #ff6347; /* Red */
+}
+
+.calendar-day.multiple-tasks {
+    background-color: #1e90ff; /* Blue */
+}

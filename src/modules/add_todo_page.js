@@ -1,3 +1,5 @@
+import { getTodos, saveTodos, getCategories, saveCategories } from './storage.js';
+
 const add_todo_page = () => {
     const content = document.getElementById('content');
     content.innerHTML = '';
@@ -79,31 +81,40 @@ const add_todo_page = () => {
     // Add form to the page
     content.appendChild(form);
     form.addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent default form submission (page reload)
+        event.preventDefault();
+        if (!titleInput.value.trim()) {
+            alert('Title is required!');
+            return;
+        }
+        if (!categoryInput.value.trim()) {
+            alert('Category is required!');
+            return;
+        }
 
-    // Gather form data
-    const todo = {
-        title: titleInput.value,
-        description: descInput.value,
-        dueDate: dateInput.value,
-        priority: form.priority.value, // or document.querySelector('input[name="priority"]:checked')?.value
-        category: categoryInput.value
-    };
+        const todo = {
+            title: titleInput.value,
+            description: descInput.value,
+            dueDate: dateInput.value,
+            priority: form.priority.value,
+            category: categoryInput.value
+        };
 
-    // Retrieve existing todos from localStorage or initialize an empty array
-    const existingTodos = JSON.parse(localStorage.getItem('todos')) || [];
+        // Save todo
+        const existingTodos = getTodos();
+        existingTodos.push(todo);
+        saveTodos(existingTodos);
 
-    // Add the new todo
-    existingTodos.push(todo);
+        // Save category if not already present
+        const categories = getCategories();
+        const newCategory = categoryInput.value.trim().toLowerCase();
+        if (newCategory && !categories.map(c => c.toLowerCase()).includes(newCategory)) {
+            categories.push(newCategory);
+            saveCategories(categories);
+        }
 
-    // Save back to localStorage
-    localStorage.setItem('todos', JSON.stringify(existingTodos));
-
-    // Optional: clear form or show confirmation
-    form.reset();
-    alert('Todo saved locally!');
-});
-
+        form.reset();
+        alert('Todo saved locally!');
+    });
 };
 
 
