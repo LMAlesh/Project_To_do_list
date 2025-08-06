@@ -1,5 +1,41 @@
 import { getTodos, saveTodos, getCategories, saveCategories } from './storage.js';
 
+// Helper to create an input
+const createInput = (type, name, placeholder = '') => {
+    const input = document.createElement('input');
+    input.type = type;
+    input.name = name;
+    if (placeholder) input.placeholder = placeholder;
+    return input;
+};
+
+// Helper to create a radio group
+const createRadioGroup = (name, options) => {
+    const wrapper = document.createElement('div');
+    options.forEach(({ value, label }) => {
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = name;
+        radio.value = value;
+        radio.id = `${name}-${value}`;
+
+        const radioLabel = document.createElement('label');
+        radioLabel.setAttribute('for', radio.id);
+        radioLabel.textContent = label;
+
+        wrapper.appendChild(radio);
+        wrapper.appendChild(radioLabel);
+    });
+    return wrapper;
+};
+
+// Optional: helper to wrap form elements (for styling)
+const wrapField = (...elements) => {
+    const wrapper = document.createElement('div');
+    elements.forEach(el => wrapper.appendChild(el));
+    return wrapper;
+};
+
 const add_todo_page = () => {
     const content = document.getElementById('content');
     content.innerHTML = '';
@@ -7,108 +43,69 @@ const add_todo_page = () => {
     const form = document.createElement('form');
     form.method = 'POST';
 
-    // Title input
-    const titleInput = document.createElement('input');
-    titleInput.type = 'text';
-    titleInput.name = 'title';
-    titleInput.placeholder = 'Enter task';
+    // Form fields
+    const titleInput = createInput('text', 'title', 'Enter task');
+    const descInput = createInput('text', 'description', 'Enter description');
+    const dateInput = createInput('date', 'due_date');
+    const categoryInput = createInput('text', 'category', 'Enter category');
 
-    // Description input
-    const descInput = document.createElement('input');
-    descInput.type = 'text';
-    descInput.name = 'description';
-    descInput.placeholder = 'Enter description';
-
-    // Date input
-    const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.name = 'due_date';
-
-    // Priority label group
     const priorityLabel = document.createElement('p');
     priorityLabel.textContent = 'Priority:';
-
-    // Priority radios and labels
-    const priorities = [
+    const priorityWrapper = createRadioGroup('priority', [
         { value: 'low', label: 'Low' },
         { value: 'moderate', label: 'Moderate' },
         { value: 'high', label: 'High' }
-    ];
+    ]);
 
-    // Create a <div> element to hold all the priority radio buttons and their labels
-    const priorityWrapper = document.createElement('div');
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Submit';
 
-    // Iterate over the priorities array (e.g., [{ value: 'low', label: 'Low' }, ...])
-    priorities.forEach(({ value, label }) => {
-    
-    // Create a radio button input for this priority option
-    const radio = document.createElement('input');
-    radio.type = 'radio';          // Set type to 'radio' so only one can be selected
-    radio.name = 'priority';       // Group all radios under the same name
-    radio.value = value;           // Set the value (e.g., 'low', 'moderate', 'high')
-    radio.id = `priority-${value}`;// Assign a unique id (e.g., 'priority-low')
+    // Append fields to form
+    form.appendChild(wrapField(titleInput));
+    form.appendChild(wrapField(descInput));
+    form.appendChild(wrapField(dateInput));
+    form.appendChild(wrapField(priorityLabel, priorityWrapper));
+    form.appendChild(wrapField(categoryInput));
+    form.appendChild(wrapField(submitButton));
 
-    // Create a label element that corresponds to this radio input
-    const radioLabel = document.createElement('label');
-    radioLabel.setAttribute('for', `priority-${value}`); // Link label to radio by id
-    radioLabel.textContent = label;                      // Set visible label text
-
-    // Append both the radio input and its label to the priority wrapper <div>
-    priorityWrapper.appendChild(radio);
-    priorityWrapper.appendChild(radioLabel);
-});
-
-    // Category input
-    const categoryInput = document.createElement('input');
-    categoryInput.type = 'text';
-    categoryInput.name = 'category';
-    categoryInput.placeholder = 'Enter category';
-
-    // Submit button 
-    const submit = document.createElement('button');
-    submit.type = 'submit';
-    submit.textContent = 'Submit';
-
-    // Append everything to the form
-    form.appendChild(titleInput);
-    form.appendChild(descInput);
-    form.appendChild(dateInput);
-    form.appendChild(priorityLabel);
-    form.appendChild(priorityWrapper);
-    form.appendChild(categoryInput);
-    form.appendChild(submit);
-
-    // Add form to the page
     content.appendChild(form);
-    form.addEventListener('submit', function(event) {
+
+    // Form submission
+    form.addEventListener('submit', function (event) {
         event.preventDefault();
-        if (!titleInput.value.trim()) {
+
+        const formData = new FormData(form);
+        const title = formData.get('title').trim();
+        const category = formData.get('category').trim();
+
+        if (!title) {
             alert('Title is required!');
             return;
         }
-        if (!categoryInput.value.trim()) {
+        if (!category) {
             alert('Category is required!');
             return;
         }
 
         const todo = {
-            title: titleInput.value,
-            description: descInput.value,
-            dueDate: dateInput.value,
-            priority: form.priority.value,
-            category: categoryInput.value
+            title,
+            description: formData.get('description'),
+            dueDate: formData.get('due_date'),
+            priority: formData.get('priority'),
+            category
         };
 
         // Save todo
-        const existingTodos = getTodos();
-        existingTodos.push(todo);
-        saveTodos(existingTodos);
+        const todos = getTodos();
+        todos.push(todo);
+        saveTodos(todos);
 
-        // Save category if not already present
+        // Save new category if not already included
         const categories = getCategories();
-        const newCategory = categoryInput.value.trim().toLowerCase();
-        if (newCategory && !categories.map(c => c.toLowerCase()).includes(newCategory)) {
-            categories.push(newCategory);
+        const lowerCategories = categories.map(c => c.toLowerCase());
+        if (!lowerCategories.includes(category.toLowerCase())) {
+            categories.push(category);
             saveCategories(categories);
         }
 
@@ -116,6 +113,5 @@ const add_todo_page = () => {
         alert('Todo saved locally!');
     });
 };
-
 
 export { add_todo_page };

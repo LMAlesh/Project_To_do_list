@@ -1,169 +1,176 @@
-import { getTodos } from './storage.js'; // Get stored tasks
-import { formatDate } from './date_utils.js'; // Format date strings
-import { home_page } from './home_page.js'; // Allow navigating to task view on day click
+import { getTodos } from './storage.js';
+import { formatDate } from './date_utils.js';
+import { home_page } from './home_page.js';
 
-// Group task priorities by date
 function getTaskDataByDate() {
-    const todos = getTodos(); // Get all tasks
-    const taskMap = {}; // Grouped by date
+    const todos = getTodos();
+    const taskMap = {};
 
     todos.forEach(todo => {
-        const date = todo.dueDate; // Task date in YYYY-MM-DD format
-        const priority = todo.priority; // "low", "moderate", or "high"
-
-        if (!taskMap[date]) taskMap[date] = []; // Initialize array if needed
-        taskMap[date].push(priority); // Add priority to that date
+        const date = todo.dueDate;
+        if (!taskMap[date]) taskMap[date] = [];
+        taskMap[date].push(todo.priority);
     });
 
-    return taskMap; // Example: { "2025-08-06": ["low", "moderate"], "2025-08-07": ["high"] }
+    return taskMap;
 }
 
-// Display calendar with proper month layout
-function showCalendarWithTasks(container) {
-    const taskData = getTaskDataByDate(); // Get task priorities grouped by date
-    const currentDate = new Date(); // Start from today
-    const year = currentDate.getFullYear(); // Current year
-    const month = currentDate.getMonth(); // Current month (0-11)
+// Helper: Create calendar header with navigation
+function createCalendarHeader(month, year, onPrev, onNext) {
+    const header = document.createElement('div');
+    header.classList.add('calendar-header');
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); // Total days in the month
-    const firstDay = new Date(year, month, 1).getDay(); // Day of week the month starts on (0=Sunday)
-
-    // Create main calendar container
-    const calendarContainer = document.createElement('div');
-    calendarContainer.classList.add('calendar-container');
-
-    // Create calendar header with month/year and navigation
-    const calendarHeader = document.createElement('div');
-    calendarHeader.classList.add('calendar-header');
-
-    const prevButton = document.createElement('button');
-    prevButton.classList.add('calendar-nav', 'prev');
-    prevButton.innerHTML = '←';
-    prevButton.title = 'Previous Month';
-
-    const monthYearDisplay = document.createElement('h2');
-    monthYearDisplay.classList.add('month-year');
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    monthYearDisplay.textContent = `${monthNames[month]} ${year}`;
+
+    const prevButton = document.createElement('button');
+    prevButton.classList.add('calendar-nav', 'prev');
+    prevButton.textContent = '←';
+    prevButton.title = 'Previous Month';
+    prevButton.addEventListener('click', onPrev);
 
     const nextButton = document.createElement('button');
     nextButton.classList.add('calendar-nav', 'next');
-    nextButton.innerHTML = '→';
+    nextButton.textContent = '→';
     nextButton.title = 'Next Month';
+    nextButton.addEventListener('click', onNext);
 
-    // Add header elements
-    calendarHeader.appendChild(prevButton);
-    calendarHeader.appendChild(monthYearDisplay);
-    calendarHeader.appendChild(nextButton);
+    const title = document.createElement('h2');
+    title.classList.add('month-year');
+    title.textContent = `${monthNames[month]} ${year}`;
 
-    // Create day-of-week headers
+    header.appendChild(prevButton);
+    header.appendChild(title);
+    header.appendChild(nextButton);
+
+    return header;
+}
+
+// Helper: Create day-of-week headers
+function createDayHeaders() {
     const dayHeaders = document.createElement('div');
     dayHeaders.classList.add('calendar-day-headers');
-    
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    dayNames.forEach(dayName => {
-        const dayHeader = document.createElement('div');
-        dayHeader.classList.add('day-header');
-        dayHeader.textContent = dayName;
-        dayHeaders.appendChild(dayHeader);
+
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+        const dayEl = document.createElement('div');
+        dayEl.classList.add('day-header');
+        dayEl.textContent = day;
+        dayHeaders.appendChild(dayEl);
     });
 
-    // Create calendar grid
-    const calendarGrid = document.createElement('div');
-    calendarGrid.classList.add('calendar-grid');
+    return dayHeaders;
+}
 
-    // Fill initial empty cells before the first day
-    for (let i = 0; i < firstDay; i++) {
-        const empty = document.createElement('div');
-        empty.classList.add('calendar-day', 'empty');
-        calendarGrid.appendChild(empty);
+// Helper: Create task indicators
+function createTaskIndicators(priorities) {
+    const container = document.createElement('div');
+    container.classList.add('task-indicators');
+
+    const uniquePriorities = [...new Set(priorities)];
+    uniquePriorities.slice(0, 3).forEach(priority => {
+        const dot = document.createElement('div');
+        dot.classList.add('task-indicator', 'small', `priority-${priority}`);
+        container.appendChild(dot);
+    });
+
+    if (priorities.length > 3) {
+        const more = document.createElement('div');
+        more.classList.add('task-indicator', 'small', 'more');
+        more.textContent = '+';
+        container.appendChild(more);
     }
 
-    // Create a day cell for each day of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayBox = document.createElement('div');
-        dayBox.classList.add('calendar-day');
+    return container;
+}
 
-        // Create day number
-        const dayNumber = document.createElement('span');
-        dayNumber.classList.add('day-number');
-        dayNumber.textContent = day;
+// Helper: Create a day cell
+function createDayCell(day, month, year, taskData) {
+    const cell = document.createElement('div');
+    cell.classList.add('calendar-day');
 
-        // Check if this is today
-        const today = new Date();
-        const isToday = day === today.getDate() && 
-                       month === today.getMonth() && 
-                       year === today.getFullYear();
-        
-        if (isToday) {
-            dayBox.classList.add('today');
-        }
+    const dayNumber = document.createElement('span');
+    dayNumber.classList.add('day-number');
+    dayNumber.textContent = day;
 
-        const priorities = taskData[dateStr]; // Get tasks for this date
+    const dateStr = formatDate(new Date(year, month, day)); // Use formatted date
+    const priorities = taskData[dateStr];
 
-        if (priorities && priorities.length > 0) {
-            // Create task indicators container
-            const taskIndicators = document.createElement('div');
-            taskIndicators.classList.add('task-indicators');
+    const today = new Date();
+    if (
+        day === today.getDate() &&
+        month === today.getMonth() &&
+        year === today.getFullYear()
+    ) {
+        cell.classList.add('today');
+    }
 
-            if (priorities.length === 1) {
-                // Single task - show priority color
-                const indicator = document.createElement('div');
-                indicator.classList.add('task-indicator', `priority-${priorities[0]}`);
-                taskIndicators.appendChild(indicator);
-                dayBox.classList.add(`has-task-${priorities[0]}`);
-            } else {
-                // Multiple tasks - show multiple dots
-                const uniquePriorities = [...new Set(priorities)];
-                uniquePriorities.slice(0, 3).forEach(priority => {
-                    const indicator = document.createElement('div');
-                    indicator.classList.add('task-indicator', 'small', `priority-${priority}`);
-                    taskIndicators.appendChild(indicator);
-                });
-                
-                if (priorities.length > 3) {
-                    const moreIndicator = document.createElement('div');
-                    moreIndicator.classList.add('task-indicator', 'small', 'more');
-                    moreIndicator.textContent = '+';
-                    taskIndicators.appendChild(moreIndicator);
-                }
-                dayBox.classList.add('has-multiple-tasks');
+    if (priorities && priorities.length) {
+        const indicators = createTaskIndicators(priorities);
+        cell.appendChild(indicators);
+        cell.classList.add('has-tasks');
+        cell.style.cursor = 'pointer';
+        cell.addEventListener('click', () => home_page(dateStr));
+    }
+
+    cell.appendChild(dayNumber);
+    return cell;
+}
+
+function showCalendarWithTasks(container) {
+    let currentDate = new Date();
+    const taskData = getTaskDataByDate();
+
+    const renderCalendar = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+
+        container.innerHTML = '';
+
+        const calendarContainer = document.createElement('div');
+        calendarContainer.classList.add('calendar-container');
+
+        // Header
+        const header = createCalendarHeader(
+            month,
+            year,
+            () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            },
+            () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
             }
+        );
 
-            dayBox.appendChild(taskIndicators);
-            dayBox.style.cursor = 'pointer';
-            dayBox.addEventListener('click', () => {
-                home_page(dateStr); // Navigate to home_page with that date
-            });
+        // Grid
+        const grid = document.createElement('div');
+        grid.classList.add('calendar-grid');
+
+        // Fill in empty days before start
+        for (let i = 0; i < firstDay; i++) {
+            const empty = document.createElement('div');
+            empty.classList.add('calendar-day', 'empty');
+            grid.appendChild(empty);
         }
 
-        dayBox.appendChild(dayNumber);
-        calendarGrid.appendChild(dayBox);
-    }
+        // Fill in actual days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayCell = createDayCell(day, month, year, taskData);
+            grid.appendChild(dayCell);
+        }
 
-    // Assemble the complete calendar
-    calendarContainer.appendChild(calendarHeader);
-    calendarContainer.appendChild(dayHeaders);
-    calendarContainer.appendChild(calendarGrid);
+        calendarContainer.appendChild(header);
+        calendarContainer.appendChild(createDayHeaders());
+        calendarContainer.appendChild(grid);
+        container.appendChild(calendarContainer);
+    };
 
-    // Clear previous content and show calendar
-    container.innerHTML = '';
-    container.appendChild(calendarContainer);
-
-    // Add navigation functionality (for future enhancement)
-    prevButton.addEventListener('click', () => {
-        // Future: Navigate to previous month
-        console.log('Previous month clicked');
-    });
-
-    nextButton.addEventListener('click', () => {
-        // Future: Navigate to next month  
-        console.log('Next month clicked');
-    });
+    renderCalendar(); // Initial render
 }
 
 export { showCalendarWithTasks };
